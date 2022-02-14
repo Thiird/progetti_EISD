@@ -1,0 +1,79 @@
+\documentclass[12pt]{article}
+\usepackage[italian]{babel}
+\usepackage{graphicx}
+\usepackage{titling}
+\usepackage{multicol}
+\usepackage{titlesec}
+\usepackage{hyperref} %To setup table of content links
+%\usepackage{changepage}
+\usepackage{geometry} %To modify margins
+
+
+ \geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=20mm,
+ top=20mm,
+ }
+
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+
+\newcommand{\sectionbreak}{\clearpage}%To start a section on a new page
+
+\title{}
+\author{Stefano Nicolis}
+%=========================================
+\begin{document}
+
+
+\begin{titlepage}
+   \begin{center}
+       \vspace*{1cm}
+ 
+	\large
+      {\huge \textbf{Production Line Task Scheduling} }
+ 
+       \vspace{1.5cm}
+ 
+       \textbf{Stefano Nicolis}\\
+	\textbf{A.A. 2021-2022}\\
+	\vspace{0.35cm}
+	\textbf{\today}
+
+\vfill
+\begin{figure}[h!]
+	\begin{center}
+	  \includegraphics[height=6cm, width=6cm]{media/logounivr}
+	\end{center}
+\end{figure}
+ 
+	\vfill
+ 	\textbf{Embedded and IoT Systems Design\\}
+ 
+       \vspace{3cm}
+ 
+      \begin{multicols}{2}
+      \textbf{Università degli Studi di Verona\\
+	 Computer Science Department}
+	\end{multicols}
+ 
+   \end{center}
+\end{titlepage}
+
+
+\tableofcontents
+
+\section{Introduction}
+The scope of this assignment is to implement the Verilog module to multiply two 3x3 matrices.
+
+\section{Final remarks}
+
+
+
+\end{document}
