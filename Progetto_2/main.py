@@ -126,7 +126,7 @@ def outputSchedule(file):
             lastEndTime = op["endTime"]
 
         outJson["tasks"].append(tempR)
-
+    print(recipiesExecuted)
     outJson["makespan"] = lastEndTime - int(recipiesExecuted[0].opsData[0]["startTime"])
 
     if not os.path.exists(OUTPUT_FILES_FOLDER):
@@ -135,35 +135,37 @@ def outputSchedule(file):
     with open(OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-1] + ".json", "w") as outfile:
         json.dump(outJson, outfile)
 
+def execAction(splitLine):
+    match splitLine[1]:
+        case "new-order": # new recipies
+            addRecipie(splitLine[2], splitLine[3])
+        case "add-materials":
+            addMaterial(splitLine[2], splitLine[3])
+        case "breakdown":
+            machineState[splitLine[2]] = bool(splitLine[3])
+
+    # execute recipies
+    if len(recipiesInExec) != 0:
+        executeRecipies()
+    startRecipies()
 
 def generateSchedule(inputFile):
     global timeTick
     global recipiesInExec
-
+    cont = 0
     with open(INPUT_FILES_FOLDER + "/" + inputFile) as a:
         line = a.readline() # skip csv header, expected to be 'type;subtype;key;value;time'
         line = a.readline()
         splitLine = line.split(";")
         while line != "": # till EOF
-            while int(splitLine[4].strip()) != timeTick:
-                timeTick += 1
-                if len(splitLine) == 5: # check for wellformed line
-                    # read current line and update resources/recipies/orders
-                    match splitLine[1]:
-                        case "new-order": # new recipies
-                            addRecipie(splitLine[2], splitLine[3])
-                        case "add-materials":
-                            addMaterial(splitLine[2], splitLine[3])
-                        case "breakdown":
-                            machineState[splitLine[2]] = bool(splitLine[3])
-
-                    # execute recipies
-                    if len(recipiesInExec) != 0:
-                        executeRecipies()
-                    startRecipies()
-
+            if len(splitLine) == 5: # check for wellformed line
+                print(cont)
+                if int(splitLine[4].strip()) != timeTick:
+                    timeTick += 1
+                execAction(splitLine)
                 line = a.readline()
                 splitLine = line.split(";")
+                cont += 1
 
 def addRecipie(name, quantity):
     if name not in recipiesToExec:
