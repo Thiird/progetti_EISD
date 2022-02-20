@@ -31,49 +31,76 @@ class Recipie:
             op["startTime"] = startTime
             op["endTime"] = -1
 
-def isMachineAvailable(recipie):
-    for equipment in recipie.ops:
+def isMachineAvailable(operation):
+    global machineState
+
+    for equipment in operation["equipment"]:
         if not machineState[equipment["equipmentName"]]:
             return False
     return True
 
-def isMaterialAvailable(recipie):
-    material = recipie["operations"]["operationName"].split("_")[1]
-    if material in material and materials[material] < 1:
+def isMaterialAvailable(operation):
+    material = operation["operationName"].split("_")
+    if( len(material) > 1):
+        material = material[1]
+    else:
+        material = material[0]
+    if material in materials and materials[material] < 1:
         return False
     return True
 
 def executeRecipies():
+    global recipiesInExec
+
+    finishedRecipies = []
     for r in recipiesInExec:
-        isMachineAvailable(r)
-        isMaterialAvailable(r)
+        isMachineAvailable(r.opsData[r.opIndex])
+        isMaterialAvailable(r.opsData[r.opIndex])
 
         # all checks passed, set startTime
-        if r.ops[r.opIndex]["started"] == 0:
-            r.ops[r.opIndex]["started"] = 1
-            r.ops[r.opIndex]["startTime"] = timeTick
+        if r.opsData[r.opIndex]["started"] == 0:
+            r.opsData[r.opIndex]["started"] = 1
+            r.opsData[r.opIndex]["startTime"] = timeTick
 
         # execute an operation step
-        processingTime = int(r.ops["equipment"][r.opIndex]["processingTime"]) - 1
-        r.ops["equipment"][r.opIndex]["processingTime"] = str(processingTime)
+        processingTime = int(r.opsData[r.opIndex]["equipment"][0]["processingTime"]) - 1
+        r.opsData[r.opIndex]["equipment"][0]["processingTime"] = str(processingTime)
 
-        if processingTime == 0:
-            r.ops[r.opIndex]["endTime"] = timeTick
-            r.ops[r.opIndex]["processingTime"] = timeTick - r.ops[r.opIndex]["startTime"]
+        if processingTime == 0: # operation is over
+            r.opsData[r.opIndex]["equipment"][0]["endTime"] = timeTick
+            r.opsData[r.opIndex]["equipment"][0]["processingTime"] = timeTick - r.opsData[r.opIndex]["startTime"]
             r.opIndex += 1
-            if len(r.operations) == r.opIndex: # recipie is over                
-                recipiesExecuted.append(r)
+            if len(r.opsData) == r.opIndex: # recipie is over
+                finishedRecipies.append(r)
+                recipiesToExec[r.name] = recipiesToExec[r.name] - 1
+            else: # choose an equipment, delete the rest
+                chooseEquipment(r, 0)
 
-        
+    for r in finishedRecipies:
+        recipiesExecuted.append(r)
+        recipiesInExec.remove(r)
+        if recipiesToExec[r.name] == 0:
+            del recipiesToExec[r.name]
+
+def chooseEquipment(r, criteria): # TODO, dont simply pick the first one
+    r.opsData[r.opIndex]["equipment"] = [r.opsData[r.opIndex]["equipment"][0]]
+
 def startRecipies():
-    # start a new recipie if machines and resources are available
+    global recipiesToExec
+    global recipiesInExec
+    global recipiesSpec
+    global timeTick
+
+    # start a new recipie if first operation machines and resources are available
     for recipie in recipiesToExec.keys():
-        isMachineAvailable(recipie)
-        isMaterialAvailable(recipie)
-        r = Recipie(recipie, recipiesSpec[recipie]["operations"])
-        recipiesInExec.append()
+        isMachineAvailable(recipiesSpec[recipie][0])
+        isMaterialAvailable(recipiesSpec[recipie][0])
+        r = Recipie(recipie, recipiesSpec[recipie], timeTick)
+        chooseEquipment(r, 0)
+        recipiesInExec.append(r)
 
 def outputSchedule(file):
+    global recipiesExecuted
     outJson = {}
     outJson["makespan"] = -1
     outJson["tasks"] = []
@@ -100,22 +127,27 @@ def outputSchedule(file):
 
         outJson["tasks"].append(tempR)
 
-    outJson["makespan"] = lastEndTime - recipiesExecuted[0].opsData[0]["startTime"]
+    outJson["makespan"] = lastEndTime - int(recipiesExecuted[0].opsData[0]["startTime"])
 
-    with open(OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + 0 + ".json", "w") as outfile:
+    if not os.path.exists(OUTPUT_FILES_FOLDER):
+        os.mkdir(OUTPUT_FILES_FOLDER)
+
+    with open(OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-1] + ".json", "w") as outfile:
         json.dump(outJson, outfile)
 
 
 def generateSchedule(inputFile):
-    with open(INPUT_FILES_FOLDER + "/" + inputFile) as a:        
+    global timeTick
+    global recipiesInExec
+
+    with open(INPUT_FILES_FOLDER + "/" + inputFile) as a:
         line = a.readline() # skip csv header, expected to be 'type;subtype;key;value;time'
         line = a.readline()
-        splitLine = ""
+        splitLine = line.split(";")
         while line != "": # till EOF
-            splitLine = line.split("")
-            if len(splitLine = 5): # check for wellformed line
-                while splitLine[4] == timeTick: # read all lines on current timeTick
-
+            while int(splitLine[4].strip()) != timeTick:
+                timeTick += 1
+                if len(splitLine) == 5: # check for wellformed line
                     # read current line and update resources/recipies/orders
                     match splitLine[1]:
                         case "new-order": # new recipies
@@ -126,17 +158,13 @@ def generateSchedule(inputFile):
                             machineState[splitLine[2]] = bool(splitLine[3])
 
                     # execute recipies
-                    if len(recipiesInExec.keys()) != 0:
+                    if len(recipiesInExec) != 0:
                         executeRecipies()
-                    
                     startRecipies()
-                    
-                    line = a.readline()
-                    splitLine = line.split("")
 
-                timeTick += 1
-            line = a.readline()
-            
+                line = a.readline()
+                splitLine = line.split(";")
+
 def addRecipie(name, quantity):
     if name not in recipiesToExec:
         recipiesToExec[name] = quantity
@@ -148,25 +176,35 @@ def addMaterial(name, quantity):
         materials[name] = quantity
     else:
         materials[name] = materials[name] + quantity
-        
+
 def loadRecipiesAndMachines():
     global recipiesSpec
     global machineState
 
+    # load recipies specifications
     with open(RECIPIES_FILE) as handle:
-        recipiesSpec = json.loads(handle.read())
+        recipiesRaw = json.loads(handle.read())
+    for recipie in recipiesRaw:
+        recipiesSpec[recipie["orderName"]] = recipie["operations"]
 
-    # Load machines names
+    # load machines names
     for recipie in recipiesSpec:
-        # print("Recipie: " + x["orderName"])
-        for op in recipie["operations"]:
+        for op in recipiesSpec[recipie]:
             for equipment in op["equipment"]:
                 machine = equipment["equipmentName"]
                 if machine not in machineState:
                     machineState[machine] = True # all machines are up by defualt
 
 def clear():
-    timeTick = 0
+    global timeTick
+    global recipiesSpec
+    global recipiesToExec
+    global recipiesInExec
+    global recipiesExecuted
+    global machineState
+    global materials
+
+    timeTick = -1
     recipiesSpec = {}
     recipiesToExec = {}
     recipiesInExec = []
