@@ -2,13 +2,11 @@
 # Università degli Studi di Verona
 # Embedded and IoT System Design Project
 
-from concurrent.futures import process
-from distutils.errors import PreprocessError
 import os
 import json
+from copy import deepcopy
 from os import listdir
 from os.path import isfile, join
-from posixpath import split
 
 timeTick = -1 # time in the simulation
 executedLine = False
@@ -55,10 +53,8 @@ def isMachineFree(operation):
     return True
 
 def isMaterialAvailable(material):
-    if( len(material) > 1):
-        material = material[1]
-    else:
-        material = material[0]
+    # material is expected to be ['LOAD', 'LEGO'] or ['QLTY', 'CTRL', 'LEGO'] or ['MILLING']...
+    material = material[len(material) - 1]
     if material in materials and materials[material] < 1:
         return False
     return True
@@ -77,12 +73,12 @@ def executeRecipies():
     for r in recipiesInExec:
         processingTime = r.opsData[r.opIndex]["equipment"][0]["processingTime"]
         if processingTime != 0:
-            if (isMachineUp(r.opsData[r.opIndex]) and isMaterialAvailable(r.opsData[r.opIndex])):
+            if (isMachineUp(r.opsData[r.opIndex]) and isMaterialAvailable(r.opsData[r.opIndex]["operationName"].split("_"))):
                 # execute an operation step
                 processingTime -= 1
                 r.opsData[r.opIndex]["equipment"][0]["processingTime"] = processingTime
             else:
-                print("No resources for " + r.name + "@" + r.opIndex + "t = " + timeTick)
+                print("No resources for " + r.name + " opIndex:" + str(r.opIndex) + " @ " + str(timeTick))
 
         if processingTime == 0: # operation is over
             # recipie owned machine for this operation, free that machine
@@ -91,14 +87,15 @@ def executeRecipies():
                 del machineUsage[machine]
 
             if len(r.opsData) - 1 == r.opIndex: # recipie is over
-                r.opsData[r.opIndex]["equipment"][0]["endTime"] = timeTick
-                r.opsData[r.opIndex]["equipment"][0]["processingTime"] = timeTick - r.opsData[r.opIndex]["startTime"]
+                print("OVER: " + r.name + " @ " + str(timeTick))
+                r.opsData[r.opIndex]["endTime"] = timeTick
+                r.opsData[r.opIndex]["processingTime"] = timeTick - r.opsData[r.opIndex]["startTime"]
                 finishedRecipies.append(r)
-
-            # is next operation's machine used by other recipies atm?
-            if isMachineFree(r.opsData[r.opIndex]) and isMachineUp(r.opsData[r.opIndex]):
-                r.opIndex += 1
-                setEquipment(r, 0) # choose an equipment, delete the rest
+            else:
+                # is next operation's machine used by other recipies atm?
+                if isMachineFree(r.opsData[r.opIndex + 1]) and isMachineUp(r.opsData[r.opIndex + 1]):
+                    r.opIndex += 1
+                    setEquipment(r, 0) # choose an equipment, delete the rest
 
     for r in finishedRecipies:
         recipiesExecuted.append(r)
@@ -131,10 +128,11 @@ def startRecipies():
             machineIndex = chooseMachine(recipiesSpec[r][0])
             choosenMachine = recipiesSpec[r][0]["equipment"][machineIndex]["equipmentName"]
             if choosenMachine not in machineUsage: # choose machine is available, can start recipie
-                rObj = Recipie(r, recipiesSpec[r], timeTick)
+                rObj = Recipie(r, deepcopy(recipiesSpec[r]), timeTick)
                 setEquipment(rObj, machineIndex)
                 machineUsage[choosenMachine] = rObj # assign machine to this recipie
                 recipiesInExec.append(rObj)
+                print("STARTED: " + rObj.name + " @ " + str(timeTick))
 
                 # check for recipies to remove from waiting queue
                 recipiesToExec[r] = recipiesToExec[r] - 1
@@ -152,7 +150,7 @@ def outputSchedule(file):
     tempR = {} # temporary operation object
     lastEndTime = -1 # endTime of last operation of last recipie to end
 
-    # build outpout json
+    # build output json
     for r in recipiesExecuted:
         for op in r.opsData:
             tempR["id"] = op["operationName"]
@@ -171,16 +169,17 @@ def outputSchedule(file):
             lastEndTime = op["endTime"]
 
         outJson["tasks"].append(tempR)
-    print(len(recipiesExecuted) + " recipies executed from file " + file)
+    print(str(len(recipiesExecuted)) + " recipies executed from file " + file)
     outJson["makespan"] = lastEndTime - int(recipiesExecuted[0].opsData[0]["startTime"])
 
     if not os.path.exists(OUTPUT_FILES_FOLDER):
         os.mkdir(OUTPUT_FILES_FOLDER)
-
-    with open(OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-1] + ".json", "w") as outfile:
+    print("DIOCA " + OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-1] + ".json")
+    print(file)
+    with open(OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-5:-4] + ".json", "w") as outfile:
         json.dump(outJson, outfile)
 
-def executeLine(splitLine):
+def parseLine(splitLine):
     match splitLine[1]:
         case "new-order": # new recipies
             addRecipie(splitLine[2], int(splitLine[3]))
@@ -210,7 +209,7 @@ def generateSchedule(inputFile):
                         startRecipies()
 
                     if (timeTick == int(splitLine[4].strip())):
-                        executeLine(splitLine)
+                        parseLine(splitLine)
                         break
 
                 line = a.readline()
@@ -253,6 +252,7 @@ def clear():
     global recipiesInExec
     global recipiesExecuted
     global machineState
+    global machineUsage
     global materials
 
     timeTick = -1
@@ -261,6 +261,7 @@ def clear():
     recipiesInExec = []
     recipiesExecuted = []
     machineState = {}
+    machineUsage = {}
     materials = {}
 
 if __name__ == "__main__":
@@ -274,9 +275,8 @@ if __name__ == "__main__":
     if len(inputFiles) == 0:
         raise FileNotFoundError("'input' directory is empty!")
 
-    loadRecipiesAndMachines()
-
     for file in inputFiles:
+        loadRecipiesAndMachines()
         generateSchedule(file)
         outputSchedule(file)
         clear()
