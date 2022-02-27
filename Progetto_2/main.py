@@ -2,6 +2,8 @@
 # Università degli Studi di Verona
 # Embedded and IoT System Design Project
 
+from concurrent.futures import process
+from distutils.errors import PreprocessError
 import os
 import json
 from os import listdir
@@ -17,7 +19,8 @@ recipiesSpec = {}     # recipieName : recipieJson
 recipiesToExec = {}   # recipieName : scheduledQuantity
 recipiesInExec = []   # Recipie() objs references
 recipiesExecuted = [] # Recipie() objs references
-machineState = {}     # machine : isUp
+machineState = {}     # machineName : isUp
+machineUsage = {}     # machineName : recipieObj that is using it
 materials = {}        # materialName : quantity in storage
 
 class Recipie:
@@ -35,7 +38,7 @@ class Recipie:
             for equipment in op["equipment"]:
                 equipment["processingTime"] = int(equipment["processingTime"])
 
-def isMachineAvailable(operation):
+def isMachineUp(operation):
     global machineState
 
     for equipment in operation["equipment"]:
@@ -43,8 +46,15 @@ def isMachineAvailable(operation):
             return False
     return True
 
-def isMaterialAvailable(operation):
-    material = operation["operationName"].split("_")
+def isMachineFree(operation):
+    global machineUsage
+
+    for equipment in operation["equipment"]:
+        if equipment["equipmentName"] in machineUsage:
+            return False # machine is being used by at least a recipie
+    return True
+
+def isMaterialAvailable(material):
     if( len(material) > 1):
         material = material[1]
     else:
@@ -53,10 +63,11 @@ def isMaterialAvailable(operation):
         return False
     return True
 
-def checkResources(operation):
-    machine = isMachineAvailable(operation)
-    materials = isMaterialAvailable(operation)
-    return machine and materials
+def checkAllResources(operation):
+    machineUp = isMachineUp(operation)
+    machineFree = isMachineFree(operation)
+    materialsAvailable = isMaterialAvailable(operation["operationName"].split("_"))
+    return machineFree and machineUp and materialsAvailable
 
 def executeRecipies():
     global recipiesInExec
@@ -64,28 +75,47 @@ def executeRecipies():
 
     finishedRecipies = []
     for r in recipiesInExec:
-        if (checkResources(r.opsData[r.opIndex])):
-            # execute an operation step
-            processingTime = r.opsData[r.opIndex]["equipment"][0]["processingTime"] - 1
-            r.opsData[r.opIndex]["equipment"][0]["processingTime"] = processingTime
+        processingTime = r.opsData[r.opIndex]["equipment"][0]["processingTime"]
+        if processingTime != 0:
+            if (isMachineUp(r.opsData[r.opIndex]) and isMaterialAvailable(r.opsData[r.opIndex])):
+                # execute an operation step
+                processingTime -= 1
+                r.opsData[r.opIndex]["equipment"][0]["processingTime"] = processingTime
+            else:
+                print("No resources for " + r.name + "@" + r.opIndex + "t = " + timeTick)
 
-            if processingTime == 0: # operation is over
+        if processingTime == 0: # operation is over
+            # recipie owned machine for this operation, free that machine
+            machine = r.opsData[r.opIndex]["equipment"][0]["equipmentName"]
+            if machine in machineUsage and machineUsage[machine] == r:
+                del machineUsage[machine]
+
+            if len(r.opsData) - 1 == r.opIndex: # recipie is over
                 r.opsData[r.opIndex]["equipment"][0]["endTime"] = timeTick
                 r.opsData[r.opIndex]["equipment"][0]["processingTime"] = timeTick - r.opsData[r.opIndex]["startTime"]
+                finishedRecipies.append(r)
+
+            # is next operation's machine used by other recipies atm?
+            if isMachineFree(r.opsData[r.opIndex]) and isMachineUp(r.opsData[r.opIndex]):
                 r.opIndex += 1
-                if len(r.opsData) == r.opIndex: # recipie is over
-                    finishedRecipies.append(r)
-                else: # choose an equipment, delete the rest
-                    chooseEquipment(r, 0)
-        else:
-            print("No resources for " + r.name + "@" + r.opIndex + "t = " + timeTick)
+                setEquipment(r, 0) # choose an equipment, delete the rest
 
     for r in finishedRecipies:
         recipiesExecuted.append(r)
         recipiesInExec.remove(r)
 
-def chooseEquipment(r, criteria): # TODO, dont simply pick the first one
+def setEquipment(r, criteria): # TODO, dont simply pick the first one
+    # removes all equipment except the choosen one
+    # leave as array to avoid problems of diversifying code before-after the equipment choice
     r.opsData[r.opIndex]["equipment"] = [r.opsData[r.opIndex]["equipment"][0]]
+
+def chooseMachine(operation):
+    # returns the index of the equipment to choose for the given operation
+    if len(operation["equipment"]) > 1:
+        # TODO equipment choice logic
+        return 0
+
+    return 0
 
 def startRecipies():
     global recipiesToExec
@@ -95,17 +125,21 @@ def startRecipies():
 
     toRemoveRecipies = []
 
-    # start a new recipie if first operation's machines and resources are available
+    # start a new recipie if first operation's machine and resources are available
     for r in recipiesToExec.keys():
-        if (checkResources(recipiesSpec[r][0])):
-            rObj = Recipie(r, recipiesSpec[r], timeTick)
-            chooseEquipment(rObj, 0)
-            recipiesInExec.append(rObj)
+        if checkAllResources(recipiesSpec[r][0]):
+            machineIndex = chooseMachine(recipiesSpec[r][0])
+            choosenMachine = recipiesSpec[r][0]["equipment"][machineIndex]["equipmentName"]
+            if choosenMachine not in machineUsage: # choose machine is available, can start recipie
+                rObj = Recipie(r, recipiesSpec[r], timeTick)
+                setEquipment(rObj, machineIndex)
+                machineUsage[choosenMachine] = rObj # assign machine to this recipie
+                recipiesInExec.append(rObj)
 
-            # check for recipies to remove from waiting queue
-            recipiesToExec[r] = recipiesToExec[r] - 1
-            if recipiesToExec[r] == 0:
-               toRemoveRecipies.append(r)
+                # check for recipies to remove from waiting queue
+                recipiesToExec[r] = recipiesToExec[r] - 1
+                if recipiesToExec[r] == 0:
+                    toRemoveRecipies.append(r)
 
     for r in toRemoveRecipies:
         del recipiesToExec[r]
