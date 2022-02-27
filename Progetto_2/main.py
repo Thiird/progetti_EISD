@@ -8,7 +8,8 @@ from os import listdir
 from os.path import isfile, join
 from posixpath import split
 
-timeTick = 0 # time in the simulation
+timeTick = -1 # time in the simulation
+executedLine = False
 RECIPIES_FILE = "Recipes.json"
 INPUT_FILES_FOLDER = "input"
 OUTPUT_FILES_FOLDER = "output"
@@ -25,11 +26,14 @@ class Recipie:
         self.opsData = operations # JSON object
         self.opIndex = 0 # which operation is the recipie at
 
-        # add data for final output
+        # adjust some fields
         for op in self.opsData:
-            op["started"] = 0
+            # add fields for output file
             op["startTime"] = startTime
             op["endTime"] = -1
+            # cast once now to avoid casting multiple times during execution
+            for equipment in op["equipment"]:
+                equipment["processingTime"] = int(equipment["processingTime"])
 
 def isMachineAvailable(operation):
     global machineState
@@ -49,38 +53,36 @@ def isMaterialAvailable(operation):
         return False
     return True
 
+def checkResources(operation):
+    machine = isMachineAvailable(operation)
+    materials = isMaterialAvailable(operation)
+    return machine and materials
+
 def executeRecipies():
     global recipiesInExec
+    global timeTick
 
     finishedRecipies = []
     for r in recipiesInExec:
-        isMachineAvailable(r.opsData[r.opIndex])
-        isMaterialAvailable(r.opsData[r.opIndex])
+        if (checkResources(r.opsData[r.opIndex])):
+            # execute an operation step
+            processingTime = r.opsData[r.opIndex]["equipment"][0]["processingTime"] - 1
+            r.opsData[r.opIndex]["equipment"][0]["processingTime"] = processingTime
 
-        # all checks passed, set startTime
-        if r.opsData[r.opIndex]["started"] == 0:
-            r.opsData[r.opIndex]["started"] = 1
-            r.opsData[r.opIndex]["startTime"] = timeTick
-
-        # execute an operation step
-        processingTime = int(r.opsData[r.opIndex]["equipment"][0]["processingTime"]) - 1
-        r.opsData[r.opIndex]["equipment"][0]["processingTime"] = str(processingTime)
-
-        if processingTime == 0: # operation is over
-            r.opsData[r.opIndex]["equipment"][0]["endTime"] = timeTick
-            r.opsData[r.opIndex]["equipment"][0]["processingTime"] = timeTick - r.opsData[r.opIndex]["startTime"]
-            r.opIndex += 1
-            if len(r.opsData) == r.opIndex: # recipie is over
-                finishedRecipies.append(r)
-                recipiesToExec[r.name] = recipiesToExec[r.name] - 1
-            else: # choose an equipment, delete the rest
-                chooseEquipment(r, 0)
+            if processingTime == 0: # operation is over
+                r.opsData[r.opIndex]["equipment"][0]["endTime"] = timeTick
+                r.opsData[r.opIndex]["equipment"][0]["processingTime"] = timeTick - r.opsData[r.opIndex]["startTime"]
+                r.opIndex += 1
+                if len(r.opsData) == r.opIndex: # recipie is over
+                    finishedRecipies.append(r)
+                else: # choose an equipment, delete the rest
+                    chooseEquipment(r, 0)
+        else:
+            print("No resources for " + r.name + "@" + r.opIndex + "t = " + timeTick)
 
     for r in finishedRecipies:
         recipiesExecuted.append(r)
         recipiesInExec.remove(r)
-        if recipiesToExec[r.name] == 0:
-            del recipiesToExec[r.name]
 
 def chooseEquipment(r, criteria): # TODO, dont simply pick the first one
     r.opsData[r.opIndex]["equipment"] = [r.opsData[r.opIndex]["equipment"][0]]
@@ -91,13 +93,22 @@ def startRecipies():
     global recipiesSpec
     global timeTick
 
-    # start a new recipie if first operation machines and resources are available
-    for recipie in recipiesToExec.keys():
-        isMachineAvailable(recipiesSpec[recipie][0])
-        isMaterialAvailable(recipiesSpec[recipie][0])
-        r = Recipie(recipie, recipiesSpec[recipie], timeTick)
-        chooseEquipment(r, 0)
-        recipiesInExec.append(r)
+    toRemoveRecipies = []
+
+    # start a new recipie if first operation's machines and resources are available
+    for r in recipiesToExec.keys():
+        if (checkResources(recipiesSpec[r][0])):
+            rObj = Recipie(r, recipiesSpec[r], timeTick)
+            chooseEquipment(rObj, 0)
+            recipiesInExec.append(rObj)
+
+            # check for recipies to remove from waiting queue
+            recipiesToExec[r] = recipiesToExec[r] - 1
+            if recipiesToExec[r] == 0:
+               toRemoveRecipies.append(r)
+
+    for r in toRemoveRecipies:
+        del recipiesToExec[r]
 
 def outputSchedule(file):
     global recipiesExecuted
@@ -126,7 +137,7 @@ def outputSchedule(file):
             lastEndTime = op["endTime"]
 
         outJson["tasks"].append(tempR)
-    print(recipiesExecuted)
+    print(len(recipiesExecuted) + " recipies executed from file " + file)
     outJson["makespan"] = lastEndTime - int(recipiesExecuted[0].opsData[0]["startTime"])
 
     if not os.path.exists(OUTPUT_FILES_FOLDER):
@@ -135,36 +146,40 @@ def outputSchedule(file):
     with open(OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-1] + ".json", "w") as outfile:
         json.dump(outJson, outfile)
 
-def execAction(splitLine):
+def executeLine(splitLine):
     match splitLine[1]:
         case "new-order": # new recipies
-            addRecipie(splitLine[2], splitLine[3])
+            addRecipie(splitLine[2], int(splitLine[3]))
         case "add-materials":
-            addMaterial(splitLine[2], splitLine[3])
+            addMaterial(splitLine[2], int(splitLine[3]))
         case "breakdown":
             machineState[splitLine[2]] = bool(splitLine[3])
-
-    # execute recipies
-    if len(recipiesInExec) != 0:
-        executeRecipies()
-    startRecipies()
 
 def generateSchedule(inputFile):
     global timeTick
     global recipiesInExec
+    global executedLine
     cont = 0
     with open(INPUT_FILES_FOLDER + "/" + inputFile) as a:
         line = a.readline() # skip csv header, expected to be 'type;subtype;key;value;time'
         line = a.readline()
-        splitLine = line.split(";")
+
         while line != "": # till EOF
+            splitLine = line.split(";")
             if len(splitLine) == 5: # check for wellformed line
-                print(cont)
-                if int(splitLine[4].strip()) != timeTick:
-                    timeTick += 1
-                execAction(splitLine)
+                #print(cont)
+
+                while True:
+                    if (timeTick < int(splitLine[4].strip())):
+                        timeTick += 1
+                        executeRecipies()
+                        startRecipies()
+
+                    if (timeTick == int(splitLine[4].strip())):
+                        executeLine(splitLine)
+                        break
+
                 line = a.readline()
-                splitLine = line.split(";")
                 cont += 1
 
 def addRecipie(name, quantity):
