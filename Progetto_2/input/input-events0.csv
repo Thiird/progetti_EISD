@@ -1,6 +1,6 @@
 type;subtype;key;value;time
-recipes;new-order;DEMO_ICE;4;0
+recipes;new-order;DEMO_ICE;1;0
 machine-event;add-materials;nails;48;0
 machine-event;add-materials;wood;24;0
 machine-event;add-materials;lego;28;0
-machine-event;breakdown;WH;True;836
+machine-event;breakdown;WH;True;5

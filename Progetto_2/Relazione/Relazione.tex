@@ -75,9 +75,13 @@ The scope of this assignment is to implement the Verilog module to multiply two 
 \section{Assumptions}
 
 -The processingTime for an operation is assumed to be greater or equal to 1
+
 -Although the input file has add-materials operations, there is no information in the Recipies.json file about how much material a certain operation uses, so even thought the algorithm checks for
 the material availability, its a futile check because it will always return positive result
+
 -The algorithm can decide which tools to use for each operation when more than one are available, this is not decided at each start of new operation, so theoretically one could change the requirement while the recipie is rurrning, and optimize the firt part of it for speed and the other for
+
+-Many design decision regarding the timing of certain actions, at first glance may seem incorrect, but please note that this is a descrete system, and reasoning in continuoos time is not comparable
 
 \section{Final remarks}
 

@@ -168,14 +168,13 @@ def outputSchedule(file):
 
             lastEndTime = op["endTime"]
 
-        outJson["tasks"].append(tempR)
+        outJson["tasks"].append(deepcopy(tempR))
     print(str(len(recipiesExecuted)) + " recipies executed from file " + file)
     outJson["makespan"] = lastEndTime - int(recipiesExecuted[0].opsData[0]["startTime"])
 
     if not os.path.exists(OUTPUT_FILES_FOLDER):
         os.mkdir(OUTPUT_FILES_FOLDER)
-    print("DIOCA " + OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-1] + ".json")
-    print(file)
+
     with open(OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-5:-4] + ".json", "w") as outfile:
         json.dump(outJson, outfile)
 
@@ -200,7 +199,6 @@ def generateSchedule(inputFile):
         while line != "": # till EOF
             splitLine = line.split(";")
             if len(splitLine) == 5: # check for wellformed line
-                #print(cont)
 
                 while True:
                     if (timeTick < int(splitLine[4].strip())):
@@ -213,7 +211,6 @@ def generateSchedule(inputFile):
                         break
 
                 line = a.readline()
-                cont += 1
 
 def addRecipie(name, quantity):
     if name not in recipiesToExec:

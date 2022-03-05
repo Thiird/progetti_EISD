@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.23 (TeX Live 2021/W32TeX) (preloaded format=pdflatex 2022.1.29)  14 FEB 2022 13:24
+This is pdfTeX, Version 3.141592653-2.6-1.40.23 (TeX Live 2021/W32TeX) (preloaded format=pdflatex 2022.1.29)  1 MAR 2022 22:00
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -318,26 +318,26 @@ File: l3backend-pdftex.def 2022-01-12 L3 backend support: PDF output (pdfTeX)
 (./Relazione.aux)
 \openout1 = `Relazione.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 33.
-LaTeX Font Info:    ... okay on input line 33.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 33.
-LaTeX Font Info:    ... okay on input line 33.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 33.
-LaTeX Font Info:    ... okay on input line 33.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 33.
-LaTeX Font Info:    ... okay on input line 33.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 33.
-LaTeX Font Info:    ... okay on input line 33.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 33.
-LaTeX Font Info:    ... okay on input line 33.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 33.
-LaTeX Font Info:    ... okay on input line 33.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 33.
-LaTeX Font Info:    ... okay on input line 33.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 33.
-LaTeX Font Info:    ... okay on input line 33.
-LaTeX Info: Redefining \it@ocap on input line 33.
-LaTeX Info: Redefining \it@ccap on input line 33.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 32.
+LaTeX Font Info:    ... okay on input line 32.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 32.
+LaTeX Font Info:    ... okay on input line 32.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 32.
+LaTeX Font Info:    ... okay on input line 32.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 32.
+LaTeX Font Info:    ... okay on input line 32.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 32.
+LaTeX Font Info:    ... okay on input line 32.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 32.
+LaTeX Font Info:    ... okay on input line 32.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 32.
+LaTeX Font Info:    ... okay on input line 32.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 32.
+LaTeX Font Info:    ... okay on input line 32.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 32.
+LaTeX Font Info:    ... okay on input line 32.
+LaTeX Info: Redefining \it@ocap on input line 32.
+LaTeX Info: Redefining \it@ccap on input line 32.
 
 
 File italian.ldf warning: 
@@ -345,7 +345,7 @@ italian.ldf    With OT1 encoding guillemets are poorly faked
 italian.ldf    Use T1 encoding
 italian.ldf    or specify a font with command \CaporaliFrom
 italian.ldf    See the documentation concerning the babel-italian typesetting 
-italian.ldf    on input line 33.
+italian.ldf    on input line 32.
 
 (c:/texlive/2021/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
@@ -377,7 +377,7 @@ File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
 Package color Info: Driver file: pdftex.def on input line 149.
 )
-Package hyperref Info: Link coloring ON on input line 33.
+Package hyperref Info: Link coloring ON on input line 32.
 
 (c:/texlive/2021/texmf-dist/tex/latex/hyperref/nameref.sty
 Package: nameref 2021-04-02 v2.47 Cross-referencing by name of section
@@ -390,9 +390,9 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 )
 \c@section@level=\count295
 )
-LaTeX Info: Redefining \ref on input line 33.
-LaTeX Info: Redefining \pageref on input line 33.
-LaTeX Info: Redefining \nameref on input line 33.
+LaTeX Info: Redefining \ref on input line 32.
+LaTeX Info: Redefining \pageref on input line 32.
+LaTeX Info: Redefining \nameref on input line 32.
 
 (./Relazione.out) (./Relazione.out)
 \@outlinefile=\write3
@@ -433,10 +433,10 @@ LaTeX Info: Redefining \nameref on input line 33.
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-<media/logounivr.png, id=12, 475.7775pt x 473.77pt>
+<media/logounivr.png, id=16, 475.7775pt x 473.77pt>
 File: media/logounivr.png Graphic file (type png)
 <use media/logounivr.png>
-Package pdftex.def Info: media/logounivr.png  used on input line 53.
+Package pdftex.def Info: media/logounivr.png  used on input line 52.
 (pdftex.def)             Requested size: 170.7135pt x 170.71611pt.
 [1
 
@@ -449,31 +449,33 @@ pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has
 been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.73 \section{Introduction}
+l.72 \section{Introduction}
                             [1
 
 ] [2
 
 ] [3
 
+] [4
+
 ] (./Relazione.aux)
 Package rerunfilecheck Info: File `Relazione.out' has not changed.
-(rerunfilecheck)             Checksum: 601A9D34AAA4ABFF3E3551D9B76E3264;214.
+(rerunfilecheck)             Checksum: 64470460A17FEE92646050A882FBC1EB;312.
  ) 
 Here is how much of TeX's memory you used:
- 10480 strings out of 478287
- 165023 string characters out of 5850749
+ 10483 strings out of 478287
+ 165049 string characters out of 5850749
  482967 words of memory out of 5000000
- 28562 multiletter control sequences out of 15000+600000
+ 28563 multiletter control sequences out of 15000+600000
  471681 words of font info for 36 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 60i,6n,63p,237b,391s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 60i,6n,63p,326b,391s stack positions out of 5000i,500n,10000p,200000b,80000s
 <c:/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb><c:/tex
 live/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb>
-Output written on Relazione.pdf (4 pages, 244016 bytes).
+Output written on Relazione.pdf (5 pages, 247438 bytes).
 PDF statistics:
- 48 PDF objects out of 1000 (max. 8388607)
- 35 compressed objects within 1 object stream
- 6 named destinations out of 1000 (max. 500000)
- 22 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 59 PDF objects out of 1000 (max. 8388607)
+ 45 compressed objects within 1 object stream
+ 8 named destinations out of 1000 (max. 500000)
+ 30 words of extra memory for PDF output out of 10000 (max. 10000000)
 

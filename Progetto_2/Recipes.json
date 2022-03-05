@@ -6,7 +6,7 @@
                 "operationName": "LOAD_LEGO",
                 "equipment": [
                     {
-                        "processingTime": "18",
+                        "processingTime": "2",
                         "electricalConsumption": "175",
                         "equipmentName": "WH"
                     }
@@ -28,7 +28,7 @@
                 "operationName": "ASSEMBLE_LEGO",
                 "equipment": [
                     {
-                        "processingTime": "105",
+                        "processingTime": "2",
                         "electricalConsumption": "225",
                         "equipmentName": "KUKA"
                     },
@@ -85,7 +85,7 @@
                 "operationName": "QLTY_CTRL_LEGO",
                 "equipment": [
                     {
-                        "processingTime": "34",
+                        "processingTime": "2",
                         "electricalConsumption": "165",
                         "equipmentName": "QC_2"
                     },
@@ -132,7 +132,7 @@
                 "operationName": "UNLOAD_LEGO",
                 "equipment": [
                     {
-                        "processingTime": "33",
+                        "processingTime": "2",
                         "electricalConsumption": "217",
                         "equipmentName": "WH"
                     }
