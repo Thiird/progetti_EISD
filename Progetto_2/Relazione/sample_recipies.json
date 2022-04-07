@@ -1,0 +1,23 @@
+[
+    {
+        "orderName": "DEMO_ICE",
+        "operations": [
+            {
+                "operationName": "LOAD_LEGO",
+                "equipment": [
+                    {
+                        "processingTime": "2",
+                        "electricalConsumption": "175",
+                        "equipmentName": "WH"
+                    }
+                ],
+                "methods":[...]
+            {
+                // second operation
+            },
+            {
+                // third operation
+            }
+        ]
+    }
+]

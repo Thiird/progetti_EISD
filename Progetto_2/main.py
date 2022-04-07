@@ -10,22 +10,24 @@ from os.path import isfile, join
 
 timeTick = -1 # time in the simulation
 executedLine = False
-RECIPIES_FILE = "Recipes.json"
+noMoreInputs = False
+RECIPES_FILE = "Recipes.json"
 INPUT_FILES_FOLDER = "input"
 OUTPUT_FILES_FOLDER = "output"
-recipiesSpec = {}     # recipieName : recipieJson
-recipiesToExec = {}   # recipieName : scheduledQuantity
-recipiesInExec = []   # Recipie() objs references
-recipiesExecuted = [] # Recipie() objs references
-machineState = {}     # machineName : isUp
-machineUsage = {}     # machineName : recipieObj that is using it
-materials = {}        # materialName : quantity in storage
+recipesSpec = {}     # recipeName : recipeJson
+recipesToExec = {}   # recipeName : scheduledQuantity
+recipesInExec = []   # Recipe() objs references
+recipesExecuted = [] # Recipe() objs references
+abortedRecipes = []  # Recipe() objs references
+machineState = {}    # machineName : isUp
+machineUsage = {}    # machineName : recipeObj that is using it
+materials = {}       # materialName : quantity in storage
 
-class Recipie:
+class Recipe:
     def __init__(self, name, operations, startTime):
         self.name = name
         self.opsData = operations # JSON object
-        self.opIndex = 0 # which operation is the recipie at
+        self.opIndex = 0 # which operation is the recipe at
 
         # adjust some fields
         for op in self.opsData:
@@ -35,6 +37,9 @@ class Recipie:
             # cast once now to avoid casting multiple times during execution
             for equipment in op["equipment"]:
                 equipment["processingTime"] = int(equipment["processingTime"])
+
+def strToBool(v):
+  return v.lower() in ("yes", "true", "t", "1")
 
 def isMachineUp(operation):
     global machineState
@@ -65,12 +70,14 @@ def checkAllResources(operation):
     materialsAvailable = isMaterialAvailable(operation["operationName"].split("_"))
     return machineFree and machineUp and materialsAvailable
 
-def executeRecipies():
-    global recipiesInExec
+def executeRecipes():
+    global recipesInExec
     global timeTick
+    global noMoreInputs
 
-    finishedRecipies = []
-    for r in recipiesInExec:
+    finishedRecipes = []
+    nonFinishableRecipes = []
+    for r in recipesInExec:
         processingTime = r.opsData[r.opIndex]["equipment"][0]["processingTime"]
         if processingTime != 0:
             if (isMachineUp(r.opsData[r.opIndex]) and isMaterialAvailable(r.opsData[r.opIndex]["operationName"].split("_"))):
@@ -78,6 +85,9 @@ def executeRecipies():
                 processingTime -= 1
                 r.opsData[r.opIndex]["equipment"][0]["processingTime"] = processingTime
             else:
+                if noMoreInputs:
+                    print("Can't finish recipie because input file is over and no resources are available")
+                    nonFinishableRecipes.append(r)
                 print("No resources for " + r.name + " opIndex:" + str(r.opIndex) + " @ " + str(timeTick))
 
         if processingTime == 0: # operation is over
@@ -90,16 +100,25 @@ def executeRecipies():
                 print("OVER: " + r.name + " @ " + str(timeTick))
                 r.opsData[r.opIndex]["endTime"] = timeTick
                 r.opsData[r.opIndex]["processingTime"] = timeTick - r.opsData[r.opIndex]["startTime"]
-                finishedRecipies.append(r)
+                finishedRecipes.append(r)
             else:
                 # is next operation's machine used by other recipies atm?
-                if isMachineFree(r.opsData[r.opIndex + 1]) and isMachineUp(r.opsData[r.opIndex + 1]):
-                    r.opIndex += 1
-                    setEquipment(r, 0) # choose an equipment, delete the rest
+                if isMachineUp(r.opsData[r.opIndex + 1]):
+                    if isMachineFree(r.opsData[r.opIndex + 1]):
+                        r.opIndex += 1
+                        setEquipment(r, 0) # choose an equipment, delete the rest
+                else:
+                    print("Can't finish recipie because input file is over and no resources are available")
+                    nonFinishableRecipes.append(r)
 
-    for r in finishedRecipies:
-        recipiesExecuted.append(r)
-        recipiesInExec.remove(r)
+
+    for r in finishedRecipes:
+        recipesExecuted.append(r)
+        recipesInExec.remove(r)
+
+    for r in nonFinishableRecipes:
+        recipesInExec.remove(r)
+        abortedRecipes.append(r)
 
 def setEquipment(r, criteria): # TODO, dont simply pick the first one
     # removes all equipment except the choosen one
@@ -114,36 +133,36 @@ def chooseMachine(operation):
 
     return 0
 
-def startRecipies():
-    global recipiesToExec
-    global recipiesInExec
-    global recipiesSpec
+def startRecipes():
+    global recipesToExec
+    global recipesInExec
+    global recipesSpec
     global timeTick
 
-    toRemoveRecipies = []
+    toRemoveRecipes = []
 
     # start a new recipie if first operation's machine and resources are available
-    for r in recipiesToExec.keys():
-        if checkAllResources(recipiesSpec[r][0]):
-            machineIndex = chooseMachine(recipiesSpec[r][0])
-            choosenMachine = recipiesSpec[r][0]["equipment"][machineIndex]["equipmentName"]
+    for r in recipesToExec.keys():
+        if checkAllResources(recipesSpec[r][0]):
+            machineIndex = chooseMachine(recipesSpec[r][0])
+            choosenMachine = recipesSpec[r][0]["equipment"][machineIndex]["equipmentName"]
             if choosenMachine not in machineUsage: # choose machine is available, can start recipie
-                rObj = Recipie(r, deepcopy(recipiesSpec[r]), timeTick)
+                rObj = Recipe(r, deepcopy(recipesSpec[r]), timeTick)
                 setEquipment(rObj, machineIndex)
                 machineUsage[choosenMachine] = rObj # assign machine to this recipie
-                recipiesInExec.append(rObj)
+                recipesInExec.append(rObj)
                 print("STARTED: " + rObj.name + " @ " + str(timeTick))
 
                 # check for recipies to remove from waiting queue
-                recipiesToExec[r] = recipiesToExec[r] - 1
-                if recipiesToExec[r] == 0:
-                    toRemoveRecipies.append(r)
+                recipesToExec[r] = recipesToExec[r] - 1
+                if recipesToExec[r] == 0:
+                    toRemoveRecipes.append(r)
 
-    for r in toRemoveRecipies:
-        del recipiesToExec[r]
+    for r in toRemoveRecipes:
+        del recipesToExec[r]
 
 def outputSchedule(file):
-    global recipiesExecuted
+    global recipesExecuted
     outJson = {}
     outJson["makespan"] = -1
     outJson["tasks"] = []
@@ -151,7 +170,7 @@ def outputSchedule(file):
     lastEndTime = -1 # endTime of last operation of last recipie to end
 
     # build output json
-    for r in recipiesExecuted:
+    for r in recipesExecuted:
         for op in r.opsData:
             tempR["id"] = op["operationName"]
             tempR["jobId"] = r.name
@@ -169,29 +188,32 @@ def outputSchedule(file):
             lastEndTime = op["endTime"]
 
         outJson["tasks"].append(deepcopy(tempR))
-    print(str(len(recipiesExecuted)) + " recipies executed from file " + file)
-    outJson["makespan"] = lastEndTime - int(recipiesExecuted[0].opsData[0]["startTime"])
+    print(str(len(recipesExecuted)) + " recipies executed from file " + file)
 
-    if not os.path.exists(OUTPUT_FILES_FOLDER):
-        os.mkdir(OUTPUT_FILES_FOLDER)
+    if len(recipesExecuted) != 0:
+        outJson["makespan"] = lastEndTime - int(recipesExecuted[0].opsData[0]["startTime"])
 
-    with open(OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-5:-4] + ".json", "w") as outfile:
-        json.dump(outJson, outfile)
+        if not os.path.exists(OUTPUT_FILES_FOLDER):
+            os.mkdir(OUTPUT_FILES_FOLDER)
+
+        with open(OUTPUT_FILES_FOLDER + "/" + "output-scheduling" + file[-5:-4] + ".json", "w") as outfile:
+            json.dump(outJson, outfile, indent=4)
 
 def parseLine(splitLine):
     match splitLine[1]:
         case "new-order": # new recipies
-            addRecipie(splitLine[2], int(splitLine[3]))
+            addRecipe(splitLine[2], int(splitLine[3]))
         case "add-materials":
             addMaterial(splitLine[2], int(splitLine[3]))
         case "breakdown":
-            machineState[splitLine[2]] = bool(splitLine[3])
+            machineState[splitLine[2]] = strToBool(splitLine[3])
 
 def generateSchedule(inputFile):
     global timeTick
-    global recipiesInExec
+    global recipesInExec
     global executedLine
-    cont = 0
+    global noMoreInputs
+
     with open(INPUT_FILES_FOLDER + "/" + inputFile) as a:
         line = a.readline() # skip csv header, expected to be 'type;subtype;key;value;time'
         line = a.readline()
@@ -203,20 +225,28 @@ def generateSchedule(inputFile):
                 while True:
                     if (timeTick < int(splitLine[4].strip())):
                         timeTick += 1
-                        executeRecipies()
-                        startRecipies()
+                        executeRecipes()
+                        startRecipes()
 
                     if (timeTick == int(splitLine[4].strip())):
                         parseLine(splitLine)
                         break
 
                 line = a.readline()
+        noMoreInputs = True # input file is over
 
-def addRecipie(name, quantity):
-    if name not in recipiesToExec:
-        recipiesToExec[name] = quantity
+        # finish to execute the remaining recipes
+        while len(recipesToExec.keys()) or len(recipesInExec) != 0:
+            timeTick += 1
+            executeRecipes()
+            startRecipes()
+
+
+def addRecipe(name, quantity):
+    if name not in recipesToExec:
+        recipesToExec[name] = quantity
     else:
-        recipiesToExec[name] = recipiesToExec[name] + quantity
+        recipesToExec[name] = recipesToExec[name] + quantity
 
 def addMaterial(name, quantity):
     if name not in materials:
@@ -224,19 +254,19 @@ def addMaterial(name, quantity):
     else:
         materials[name] = materials[name] + quantity
 
-def loadRecipiesAndMachines():
-    global recipiesSpec
+def loadRecipesAndMachines():
+    global recipesSpec
     global machineState
 
     # load recipies specifications
-    with open(RECIPIES_FILE) as handle:
-        recipiesRaw = json.loads(handle.read())
-    for recipie in recipiesRaw:
-        recipiesSpec[recipie["orderName"]] = recipie["operations"]
+    with open(RECIPES_FILE) as handle:
+        recipesRaw = json.loads(handle.read())
+    for recipe in recipesRaw:
+        recipesSpec[recipe["orderName"]] = recipe["operations"]
 
     # load machines names
-    for recipie in recipiesSpec:
-        for op in recipiesSpec[recipie]:
+    for recipe in recipesSpec:
+        for op in recipesSpec[recipe]:
             for equipment in op["equipment"]:
                 machine = equipment["equipmentName"]
                 if machine not in machineState:
@@ -244,27 +274,27 @@ def loadRecipiesAndMachines():
 
 def clear():
     global timeTick
-    global recipiesSpec
-    global recipiesToExec
-    global recipiesInExec
-    global recipiesExecuted
+    global recipesSpec
+    global recipesToExec
+    global recipesInExec
+    global recipesExecuted
     global machineState
     global machineUsage
     global materials
 
     timeTick = -1
-    recipiesSpec = {}
-    recipiesToExec = {}
-    recipiesInExec = []
-    recipiesExecuted = []
+    recipesSpec = {}
+    recipesToExec = {}
+    recipesInExec = []
+    recipesExecuted = []
     machineState = {}
     machineUsage = {}
     materials = {}
 
 if __name__ == "__main__":
 
-    if not os.path.exists(RECIPIES_FILE):
-        raise FileNotFoundError("'Recipies.json' file is missing!")
+    if not os.path.exists(RECIPES_FILE):
+        raise FileNotFoundError("'Recipes.json' file is missing!")
     if not os.path.exists(INPUT_FILES_FOLDER):
         raise FileNotFoundError("local 'input' directory is missing!")
 
@@ -273,7 +303,8 @@ if __name__ == "__main__":
         raise FileNotFoundError("'input' directory is empty!")
 
     for file in inputFiles:
-        loadRecipiesAndMachines()
+        loadRecipesAndMachines()
         generateSchedule(file)
         outputSchedule(file)
         clear()
+        break
