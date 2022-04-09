@@ -4,4 +4,4 @@
 \contentsline {section}{\numberline {2}Assumptions}{3}{section.2}%
 \contentsline {section}{\numberline {3}Structure of the project}{4}{section.3}%
 \contentsline {section}{\numberline {4}Example of execution}{5}{section.4}%
-\contentsline {section}{\numberline {5}Final remarks}{6}{section.5}%
+\contentsline {section}{\numberline {5}Examples of execution}{6}{section.5}%

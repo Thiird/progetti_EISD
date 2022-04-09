@@ -90,7 +90,6 @@ Given a list of events that happen on the production line and the specification 
 -Many design decision regarding the timing of certain actions, at first glance may seem incorrect, but please note that this is a descrete system, and reasoning in continuoos time is not comparable
 
 \section{Structure of the project}
-The algorithm is implemented in Python in a declarative manner.
 
 Two files are given, the Recipes.json file and one or more input files in .csv format.
 An example of input file is:
@@ -98,16 +97,16 @@ An example of input file is:
 \csvautotabular{sample_input.csv}
 \\
 
-The input file specifies events on the production line and the time at which they occured, such as a machine breaking down or a new recipie order coming in, for example, from the file above we can see that the first line tells me that a new order for three DEMO\_ICE recipies has arrived at time 0, the second line tells me that a new shipment of 48 nails is added to the warehouse, the fifth line tells me that at time = 32 the WH machine will go offline.
+The input file specifies events on the production line and the time at which they occur, such as a machine breaking down or a new recipie order coming in. As an example, from the file above we can see that the first line tells me that a new order for three DEMO\_ICE recipies has arrived at time 0, the second line tells me that a new shipment of 48 nails is added to the warehouse, the fifth line tells me that at time 32 the WH machine will go offline.
 
-The Recipies.json file instead, stores the specification for each possible recipie, which means a name and a list of operations that compose that recipie. Every operation has a name and a list of possible equipment that can be executed with, one must be choosen at run time.
+The Recipies.json file instead, stores the specification for each possible recipie, which means a name and a list of operations that compose that recipie. Every operation has a name and a list of possible equipment that can be executed with, one of which must be choosen at run time.
 
 The scheduling algorithm is implemented in a declarative manner using Python, inside \code{main.py}, and it generates a schedule file in the \code{output} directory for each input file found in the \code {input} folder.
 
 The \code{Recipie} class is used to represent a recipie in execution, each instance contains:
 \begin{itemize}
 \item name: the name of the recipie, taken from \code{Recipes.json} as a plain string
-\item opsData: short for operationsData, initially its a copy of the operations field taken from Recipie.json, during the execution it's updated to keep track of the recipie status
+\item opsData: short for operationsData, initially it's a copy of the operations field taken from Recipie.json, and during the simulation it is accessed as a dictionary and updated to keep track of the recipie status
 \item opIndex: short for operationsIndex, the index of the operation that the recipie is currently at
 \end{itemize}
 The algorithm keeps track of the recipies execution by updating the opsData and opIndex fields of the various \code{Recipie} instances that have been created during the execution.
@@ -125,9 +124,11 @@ The current policy is to just choose the first equipment of the list, this could
 
 Once all the input file has been read, given that some recipies might still be in execution, it keeps incrementing \code{timeTick} and executing the recipies.
 
+Some recipies may not terminate if resources are lacking or the required machine broke down and never came back online. These reqcipies will be aborted and a warning is given.
+
 Once all the recipies are over, the calculated schedule is written to file.
 
-\section{Final remarks}
+\section{Examples of execution}
 Let's make a brief example to understand how the algorithm works.
 Let's suppose that the input file only has the following line:
 %recipes;new-order;DEMO_ICE;1;0

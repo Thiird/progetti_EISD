@@ -39,7 +39,7 @@ class Recipe:
                 equipment["processingTime"] = int(equipment["processingTime"])
 
 def strToBool(v):
-  return v.lower() in ("yes", "true", "t", "1")
+  return v.lower() in ("yes", "true", "1")
 
 def isMachineUp(operation):
     global machineState
@@ -86,11 +86,13 @@ def executeRecipes():
                 r.opsData[r.opIndex]["equipment"][0]["processingTime"] = processingTime
             else:
                 if noMoreInputs:
-                    print("Can't finish recipie because input file is over and no resources are available")
+                    print("Can't finish recipe '" + r.name + "' because input file is over and no resources are available.")
                     nonFinishableRecipes.append(r)
-                print("No resources for " + r.name + " opIndex:" + str(r.opIndex) + " @ " + str(timeTick))
+                else:
+                    print("No resources for " + r.name + " opIndex:" + str(r.opIndex) + " @ " + str(timeTick) + " skipping iteration.")
 
         if processingTime == 0: # operation is over
+            r.opsData[r.opIndex]["endTime"] = timeTick
             # recipie owned machine for this operation, free that machine
             machine = r.opsData[r.opIndex]["equipment"][0]["equipmentName"]
             if machine in machineUsage and machineUsage[machine] == r:
@@ -98,7 +100,6 @@ def executeRecipes():
 
             if len(r.opsData) - 1 == r.opIndex: # recipie is over
                 print("OVER: " + r.name + " @ " + str(timeTick))
-                r.opsData[r.opIndex]["endTime"] = timeTick
                 r.opsData[r.opIndex]["processingTime"] = timeTick - r.opsData[r.opIndex]["startTime"]
                 finishedRecipes.append(r)
             else:
@@ -108,9 +109,9 @@ def executeRecipes():
                         r.opIndex += 1
                         setEquipment(r, 0) # choose an equipment, delete the rest
                 else:
-                    print("Can't finish recipie because input file is over and no resources are available")
-                    nonFinishableRecipes.append(r)
-
+                    if noMoreInputs:
+                        print("Can't finish recipe '" + r.name + "' because input file is over and no resources are available.")
+                        nonFinishableRecipes.append(r)
 
     for r in finishedRecipes:
         recipesExecuted.append(r)
@@ -187,7 +188,7 @@ def outputSchedule(file):
 
             lastEndTime = op["endTime"]
 
-        outJson["tasks"].append(deepcopy(tempR))
+            outJson["tasks"].append(deepcopy(tempR))
     print(str(len(recipesExecuted)) + " recipies executed from file " + file)
 
     if len(recipesExecuted) != 0:
@@ -200,13 +201,14 @@ def outputSchedule(file):
             json.dump(outJson, outfile, indent=4)
 
 def parseLine(splitLine):
+    global machineState
     match splitLine[1]:
         case "new-order": # new recipies
             addRecipe(splitLine[2], int(splitLine[3]))
         case "add-materials":
             addMaterial(splitLine[2], int(splitLine[3]))
         case "breakdown":
-            machineState[splitLine[2]] = strToBool(splitLine[3])
+            machineState[splitLine[2]] = not strToBool(splitLine[3])
 
 def generateSchedule(inputFile):
     global timeTick
@@ -243,10 +245,11 @@ def generateSchedule(inputFile):
 
 
 def addRecipe(name, quantity):
-    if name not in recipesToExec:
-        recipesToExec[name] = quantity
-    else:
-        recipesToExec[name] = recipesToExec[name] + quantity
+    if quantity != 0:
+        if name not in recipesToExec:
+            recipesToExec[name] = quantity
+        else:
+            recipesToExec[name] = recipesToExec[name] + quantity
 
 def addMaterial(name, quantity):
     if name not in materials:
@@ -303,8 +306,8 @@ if __name__ == "__main__":
         raise FileNotFoundError("'input' directory is empty!")
 
     for file in inputFiles:
+        print("Reading " + file + "...")
         loadRecipesAndMachines()
         generateSchedule(file)
         outputSchedule(file)
         clear()
-        break
