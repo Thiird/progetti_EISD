@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.10)
+project(mmul_UT)
+
+find_package(SystemCLanguage CONFIG REQUIRED)
+set (CMAKE_CXX_STANDARD ${SystemC_CXX_STANDARD})
+
+include_directories(
+    "include"
+    "/home/magister/pse_libraries/systemc"
+)
+
+set(SOURCES
+    src/${CMAKE_PROJECT_NAME}.cc
+    src/${CMAKE_PROJECT_NAME}_testbench.cc
+    src/main_${CMAKE_PROJECT_NAME}.cc
+    src/bmul_UT.cc
+    )
+
+add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
+target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC SystemC::systemc)

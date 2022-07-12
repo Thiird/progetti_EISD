@@ -1,0 +1,3 @@
+/home/magister/Desktop/matrixmultiplier/TLM/build/CMakeFiles/rebuild_cache.dir
+/home/magister/Desktop/matrixmultiplier/TLM/build/CMakeFiles/edit_cache.dir
+/home/magister/Desktop/matrixmultiplier/TLM/build/CMakeFiles/mmul_UT.dir

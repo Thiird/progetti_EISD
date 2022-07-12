@@ -1,0 +1,1 @@
+/bin/x86_64-linux-gnu-g++-9  -g   CMakeFiles/bmul_UT.dir/src/bmul_UT.cc.o CMakeFiles/bmul_UT.dir/src/bmul_UT_testbench.cc.o CMakeFiles/bmul_UT.dir/src/main_bmul_UT.cc.o  -o bmul_UT  /home/magister/Desktop/systemc-2.3.3/build/src/libsystemc.a -pthread 
