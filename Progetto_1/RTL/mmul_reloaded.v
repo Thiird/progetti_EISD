@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+
 //This module multiplies 2 matrices given in input as a 64 bits number.
 //Matrices are fixed 2 x 2 dimension and have at each cell a 16 bits fixed point number.
 //The number is composed by a 8 bit integer part and a 8 bits decimal part.
@@ -29,73 +30,73 @@ reg [15:0] B [0:N-1][0:N-1];
 
 reg [3:0] STATE, NEXT_STATE;
 
-parameter ST_RES = 4'b0000, ST_INITIAL = 4'b0001 , ST_IN_INT = 4'b0010, ST_IN_DEC = 4'b1000, ST_WAIT_DEC = 4'b1001 , ST_MUL1 = 4'b0011 ,ST_MUL2 = 4'b0100, ST_MUL3 = 4'b0101, ST_MUL4 = 4'b0110, ST_OUTPUT = 4'b0111;
+parameter RESET = 4'b0000, START = 4'b0001 , GET_INTEGER = 4'b0010, GET_DECIMAL = 4'b1000, WAIT_DECIMAL = 4'b1001 , MUL1 = 4'b0011 ,MUL2 = 4'b0100, MUL2 = 4'b0101, MUL2 = 4'b0110, OUTPUT = 4'b0111;
 
 always @(STATE ,in_rdy1,rdyck,in_rdy2) begin
     case(STATE)
-        ST_RES:begin NEXT_STATE <= ST_INITIAL; end
+        RESET:begin NEXT_STATE <= START; end
 
-        ST_INITIAL: begin//Init
+        START: begin
                 if (in_rdy1) begin
-                    NEXT_STATE <= ST_IN_INT;
+                    NEXT_STATE <= GET_INTEGER;
                 end
                 else begin
-                    NEXT_STATE <= ST_INITIAL;
+                    NEXT_STATE <= START;
                 end
               end
 
-        ST_IN_INT: begin
-                    NEXT_STATE <= ST_WAIT_DEC;
+        GET_INTEGER: begin
+                    NEXT_STATE <= WAIT_DECIMAL;
                 end
 
-        ST_WAIT_DEC: begin
+        WAIT_DECIMAL: begin
                         if(in_rdy2) begin
-                                NEXT_STATE<= ST_IN_DEC;
+                                NEXT_STATE<= GET_DECIMAL;
                          end else begin end
                      end
 
-        ST_IN_DEC:begin
-                       NEXT_STATE <= ST_MUL1;
+        GET_DECIMAL:begin
+                       NEXT_STATE <= MUL1;
                   end
 
-        ST_MUL1: begin//prima riga per prima colonna
-               if(rdyck)begin NEXT_STATE <= ST_MUL2;
+        MUL1: begin//prima riga per prima colonna
+               if(rdyck)begin NEXT_STATE <= MUL2;
                end else
                 begin end
               end
 
-        ST_MUL2: begin//prima riga per seconda colonna e memorizza valori prima
+        MUL2: begin//prima riga per seconda colonna e memorizza valori prima
                if(rdyck)begin
-                NEXT_STATE <= ST_MUL3;
+                NEXT_STATE <= MUL2;
                 end else
                 begin end
               end
 
-        ST_MUL3:begin//seconda riga per prima colonna e memorizza valori prima
+        MUL2:begin//seconda riga per prima colonna e memorizza valori prima
              if(rdyck)begin
-                NEXT_STATE <= ST_MUL4;
+                NEXT_STATE <= MUL2;
              end else
                 begin end
              end
 
-        ST_MUL4:begin//seconda riga per seconda colonna e memorizza valori prima
+        MUL2:begin//seconda riga per seconda colonna e memorizza valori prima
             if(rdyck)begin
-                 NEXT_STATE <= ST_OUTPUT;
+                 NEXT_STATE <= OUTPUT;
               end else
                 begin end
              end
 
-         ST_OUTPUT: begin
-                 NEXT_STATE <= ST_INITIAL;
+         OUTPUT: begin
+                 NEXT_STATE <= START;
           end
 
-        default: begin NEXT_STATE <= ST_RES; end
+        default: begin NEXT_STATE <= RESET; end
     endcase
 end
 
 always @(posedge clk, posedge rst) begin
      if(rst)begin
-        STATE <= ST_RES;
+        STATE <= RESET;
              //Azzera tutto
                  A[0][0] <= 0;
                  A[1][0] <= 0;
@@ -129,10 +130,10 @@ always @(posedge clk, posedge rst) begin
      STATE <= NEXT_STATE;
          case(NEXT_STATE)
 
-             ST_RES: begin
+             RESET: begin
                     end
 
-             ST_INITIAL:begin
+             START:begin
                  rst1 <= 1'b0;
                  rst2 <= 1'b0;
 
@@ -147,7 +148,7 @@ always @(posedge clk, posedge rst) begin
                  B[1][1] <= 0;
              end
 
-             ST_IN_INT: begin
+             GET_INTEGER: begin
                 //Integer part of input goes into A matrix
                 A[0][0][15:8] <= A11;
                 A[0][1][15:8] <= A12;
@@ -164,11 +165,11 @@ always @(posedge clk, posedge rst) begin
                 rst2 <= 1'b1;
              end
 
-             ST_WAIT_DEC: begin
+             WAIT_DECIMAL: begin
                 read_in1 <= 1'b1;
              end
 
-             ST_IN_DEC: begin
+             GET_DECIMAL: begin
               A[0][0][7:0] <= A11;
               A[0][1][7:0] <= A12;
               A[1][0][7:0] <= A21;
@@ -185,7 +186,7 @@ always @(posedge clk, posedge rst) begin
 
 
 
-             ST_MUL1: begin // first row, first column
+             MUL1: begin // first row, first column
                     rst1 <= 1'b0;
                     rst2 <= 1'b0;
 
@@ -205,7 +206,7 @@ always @(posedge clk, posedge rst) begin
                      end
                    end
 
-             ST_MUL2:begin
+             MUL2:begin
                     rst1 <= 1'b0;
                     rst2 <= 1'b0;
 
@@ -236,7 +237,7 @@ always @(posedge clk, posedge rst) begin
                 end
              end
 
-             ST_MUL3:begin
+             MUL2:begin
                     rst1 <= 1'b0;
                     rst2 <= 1'b0;
 
@@ -268,7 +269,7 @@ always @(posedge clk, posedge rst) begin
                 end
              end
 
-             ST_MUL4: begin
+             MUL2: begin
                     rst1 <= 1'b0;
                     rst2 <= 1'b0;
 
@@ -302,7 +303,7 @@ always @(posedge clk, posedge rst) begin
                 end
              end
 
-             ST_OUTPUT: begin
+             OUTPUT: begin
                     rdyck <= 0;
 
                     m_in_rdy1 <= 1'b0;
