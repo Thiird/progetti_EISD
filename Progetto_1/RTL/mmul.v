@@ -1,4 +1,6 @@
-`timescale 1ns / 1ps
+ // <time_unit>/<time_precision>
+ `timescale 1ns / 1ps
+
 // This module computes the multiplication of two matrices given
 // A matrix is defined by 64 bits, because it's a 2x2 and each number is 16 bits (16*4 = 64)
 // The first 8 LSB bits of the number are the decimal part, the 8 MSB are the integer part
@@ -31,11 +33,12 @@ reg [2:0] STATE, NEXT_STATE; // for EFSM
 
 parameter ST_RES = 3'b000, ST_0 = 3'b001 , ST_1 = 3'b010 , ST_2 = 3'b011 ,ST_3 = 3'b100, ST_4 = 3'b101, ST_DONE = 3'b110, ST_OUTPUT = 3'b111;
 
-always @(STATE ,in_rdy,rdyck) begin
+// controller FSM
+always @(STATE , in_rdy,rdyck) begin
     case(STATE)
         ST_RES:begin NEXT_STATE <= ST_0; end
 
-        ST_0: begin//Init
+        ST_0: begin
                 if (in_rdy) begin
                     NEXT_STATE <= ST_1;
                 end
@@ -87,6 +90,8 @@ always @(STATE ,in_rdy,rdyck) begin
     endcase
 end
 
+
+// datapath FSM
 always @(posedge clk, posedge rst) begin
     if(rst)begin
         STATE <= ST_RES;
