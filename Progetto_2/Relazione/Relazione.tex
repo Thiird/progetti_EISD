@@ -79,25 +79,14 @@ The assignment requires the creation of an algorithm for the scheduling of recip
 
 Given a list of events that happen on the production line and the specification of the possible recipies to be executed, the algorithm must output a json file detailing the execution order of the recipies.
 
-\section{Assumptions}
-
--The processingTime for an operation is assumed to be greater or equal to 1
-
--Although the input file has add-materials operations, there is no information in the Recipies.json file about how much material a certain operation uses, so even thought the algorithm checks for the material availability, its a futile check because it will always return positive result
-
--The algorithm can decide which tools to use for each operation when more than one are available, this is not decided at each start of new operation, so theoretically one could change the requirement while the recipie is rurrning, and optimize the firt part of it for speed and the other for
-
--Many design decision regarding the timing of certain actions, at first glance may seem incorrect, but please note that this is a descrete system, and reasoning in continuoos time is not comparable
-
-\section{Structure of the project}
-
+\section{Project structure}
 Two files are given, the Recipes.json file and one or more input files in .csv format.
 An example of input file is:
-
+\\
 \csvautotabular{sample_input.csv}
 \\
 
-The input file specifies events on the production line and the time at which they occur, such as a machine breaking down or a new recipie order coming in. As an example, from the file above we can see that the first line tells me that a new order for three DEMO\_ICE recipies has arrived at time 0, the second line tells me that a new shipment of 48 nails is added to the warehouse, the fifth line tells me that at time 32 the WH machine will go offline.
+The input file specifies events on the production line and the time at which they occur, such as a machine breaking down or a new recipie order coming in. As an example, from the file above we can see that the first line says that a new order for three DEMO\_ICE recipies has arrived at time 0, the second line says that a new shipment of 48 nails arrives to the warehouse, the fifth line says that at time 32 the WH machine will go offline.
 
 The Recipies.json file instead, stores the specification for each possible recipie, which means a name and a list of operations that compose that recipie. Every operation has a name and a list of possible equipment that can be executed with, one of which must be choosen at run time.
 
@@ -105,9 +94,9 @@ The scheduling algorithm is implemented in a declarative manner using Python, in
 
 The \code{Recipie} class is used to represent a recipie in execution, each instance contains:
 \begin{itemize}
-\item name: the name of the recipie, taken from \code{Recipes.json} as a plain string
-\item opsData: short for operationsData, initially it's a copy of the operations field taken from Recipie.json, and during the simulation it is accessed as a dictionary and updated to keep track of the recipie status
-\item opIndex: short for operationsIndex, the index of the operation that the recipie is currently at
+\item \textbf{name}: the name of the recipie, taken from \code{Recipes.json} as a plain string
+\item \textbf{opsData}: short for operationsData, initially it's a copy of the operations field taken from Recipie.json, and during the simulation it is accessed as a dictionary and updated to keep track of the recipie status
+\item \textbf{opIndex}: short for operationsIndex, the index of the operation that the recipie is currently at
 \end{itemize}
 The algorithm keeps track of the recipies execution by updating the opsData and opIndex fields of the various \code{Recipie} instances that have been created during the execution.
 
@@ -116,23 +105,22 @@ The algorithm simulates the passing of time with an integer variable, called tim
 
 When the value of timeTick corresponds to the timestamp in the current line from the input file, it means it's time to execute the action specified in the line and then keep executing.
 
-If there is a time gap between two consecutive lines in the input file, for example line 1 has a timestamp of 1 and line two has a timestamp of 26, after having read and executed line 1, the algorithm simulates all the intermediate steps from 2 to to 26 before executing what the second line says.
+If there is a time gap between two consecutive lines in the input file, for example line 1 has a timestamp of 1 and line two has a timestamp of 26, after having read and executed line 1, the algorithm simulates all the intermediate steps from 2 to to 26 before executing what line 26 says.
 
 When terminating an operation for a particular recipie and starting a new one, for those that have more than one possibile equipment to be executed with, the algorithms needs to decide which one to use to execute the operation, so by calling the setEquipment method, a certain policy is applied and the choice is remembered by setting all the non-choosen equipment to empty string.
 
 The current policy is to just choose the first equipment of the list, this could be easily modified to choose the equipment based on power consumption or execution speed.
 
-Once all the input file has been read, given that some recipies might still be in execution, it keeps incrementing \code{timeTick} and executing the recipies.
+Once all the input file has been read, given that some recipies might still be in execution, it keeps incrementing \code{timeTick} and executing the recipies untill each one has finished its execution.
 
-Some recipies may not terminate if resources are lacking or the required machine broke down and never came back online. These reqcipies will be aborted and a warning is given.
+Some recipies may not terminate if resources are lacking or the required machine broke down and never came back online. These recipies will be aborted and a warning is given.
 
 Once all the recipies are over, the calculated schedule is written to file.
 
-\section{Examples of execution}
-Let's make a brief example to understand how the algorithm works.
-Let's suppose that the input file only has the following line:
-%recipes;new-order;DEMO_ICE;1;0
-The algorithm has to schedule a single \code{DEMO\_ICE} recipe
+\section{Notes}
+The assignment left many aspects of how the program should look like up to the developer, some design choices are listed below:
+
+-Although the input file has add-materials operations, there is no information in the Recipies.json file about how much material a certain operation uses, so even thought the algorithm checks for the material availability, its a futile check because it will always return a positive result
 
 
 

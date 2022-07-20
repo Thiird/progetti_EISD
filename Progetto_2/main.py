@@ -79,7 +79,7 @@ def executeRecipes():
     nonFinishableRecipes = []
     for r in recipesInExec:
         processingTime = r.opsData[r.opIndex]["equipment"][0]["processingTime"]
-        if processingTime != 0:
+        if processingTime > 0:
             if (isMachineUp(r.opsData[r.opIndex]) and isMaterialAvailable(r.opsData[r.opIndex]["operationName"].split("_"))):
                 # execute an operation step
                 processingTime -= 1
@@ -99,7 +99,7 @@ def executeRecipes():
                 del machineUsage[machine]
 
             if len(r.opsData) - 1 == r.opIndex: # recipie is over
-                print("OVER: " + r.name + " @ " + str(timeTick))
+                print("OVER: " + r.name + ", start: " + str(r.opsData[0]["startTime"]) + " end: " + str(timeTick))
                 r.opsData[r.opIndex]["processingTime"] = timeTick - r.opsData[r.opIndex]["startTime"]
                 finishedRecipes.append(r)
             else:
